@@ -65,7 +65,10 @@ inputGrids{4} = [0.5, .6, .7, .9, 1, 1.1, 1.3, 1.5, 2];
 omega = load('omegaTemplate_revised.mat');
 omegaShape = omega.A;
 
-for i=1:5:N
+elementsToCheck = [1:N];
+elementsToCheck(1:5:N) = [];
+
+for i=elementsToCheck
     startTime = tic;
     img = imread(fullfile(buffydir,Files(i).name));
     out(i).frame = str2double(Files(i).name(1:end-4));
