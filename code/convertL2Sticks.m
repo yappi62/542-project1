@@ -7,7 +7,7 @@ function [ sticks ] = convertL2Sticks(L, partNum)
 % 1=torso, 2=left upper arm, 3=right upper arm, 4=left lower arm, 5=right lower arm, 6= head
 idealSizes = [160 95 95 65 65 60];
 
-if partNum == 3 || partNum == 2
+if partNum == 2 || partNum == 3 || partNum == 4 || partNum == 5
     L(3) = L(3) + pi/2;
 end
 

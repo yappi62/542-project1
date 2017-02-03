@@ -1,4 +1,4 @@
-function cost = newCostFunction(L,part,seq,imgList);
+function cost = newCostFunction(L,part,seq,imgList,omegaShape)
 
 if part ~= 1 && part ~= 6
     cost = 0.;
@@ -31,51 +31,75 @@ targetImage = imrotate(targetImage,L_theta);
 %omega = load('omegaTemplate_revised.mat');
 %omegaShape = omega.omegaShape;
 
-omega = load('omegaTemplate_revised.mat');
-omegaShape = omega.A;
 
-figure;
-if part == 1 %head
+
+row = size(imgList{seq},1);
+col = size(imgList{seq},2);
+MAX_COST = realmax;
+%figure;
+if part == 6 %head
     
     neckx = L_x;
     necky = L_y + 12*L_scale;
     
-    tlx = neckx-h_w/2*L_scale;
-    tly = necky-h_h/2*L_scale;
-    brx = neckx+h_w/2*L_scale;
-    bry = necky+h_h/2*L_scale;
+    tlx = ceil(neckx-h_w/2*L_scale);
+    tly = ceil(necky-h_h/2*L_scale);
+    brx = floor(neckx+h_w/2*L_scale);
+    bry = floor(necky+h_h/2*L_scale);
     
-    imshow(imgList{seq});
-    hold on;
-    line([tlx,tlx,brx,brx,tlx],[tly,bry,bry,tly,tly]);
+    if tlx<=0 || tly <=0 || tlx> col || tly >row
+        cost = MAX_COST;
+        return;
+    end
+    
+    if brx<=0 || bry <=0 || brx> col || bry >row
+        cost = MAX_COST;
+        return;
+    end
+    
+%     imshow(imgList{seq});
+%     hold on;
+%     line([tlx,tlx,brx,brx,tlx],[tly,bry,bry,tly,tly]);
+    
     
     headPatch = targetImage(tly:bry,tlx:brx);
-    figure;
-    headPatch = imresize(headPatch,[size(omegaShape,1),size(omegaShape,1)]);
-    imshow(headPatch);
+%     figure;
+     headPatch = imresize(headPatch,[size(omegaShape,1),size(omegaShape,1)]);
+%     imshow(headPatch);
     [hmag, hdir] = imgradient(uint8(headPatch),'sobel');
-    sum(sum(double(omegaShape) .* hmag))
+    %sum(sum(double(omegaShape) .* hmag));
     cost = 1/ sum(sum(double(omegaShape) .* hmag));
-elseif part == 6 %torso
+elseif part == 1 %torso
     
     neckx = L_x;
     necky = L_y - t_h*L_scale;
     
-    tlx = neckx-t_w/2*L_scale;
-    tly = necky-t_h/2*L_scale;
-    brx = neckx+t_w/2*L_scale;
-    bry = necky+t_h/2*L_scale;
+    tlx = ceil(neckx-t_w/2*L_scale);
+    tly = ceil(necky-t_h/2*L_scale);
+    brx = floor(neckx+t_w/2*L_scale);
+    bry = floor(necky+t_h/2*L_scale);
     
-    imshow(imgList{seq});
-    hold on;
-    line([tlx,tlx,brx,brx,tlx],[tly,bry,bry,tly,tly]);
+       
+    if tlx<=0 || tly <=0 || tlx >= col || tly >= row
+        cost = MAX_COST;
+        return;
+    end
+    
+    if brx<=0 || bry <=0 || brx >= col || bry >= row
+        cost = MAX_COST;
+        return;
+    end
+    
+%     imshow(imgList{seq});
+%     hold on;
+%     line([tlx,tlx,brx,brx,tlx],[tly,bry,bry,tly,tly]);
     
     torsoPatch = targetImage(tly:bry,tlx:brx);
-    figure;
-    torsoPatch = imresize(torsoPatch,[size(omegaShape,1),size(omegaShape,1)]);
-    imshow(torsoPatch);
+%     figure;
+     torsoPatch = imresize(torsoPatch,[size(omegaShape,1),size(omegaShape,1)]);
+%     imshow(torsoPatch);
     [tmag, tdir] = imgradient(uint8(torsoPatch),'sobel');
-    sum(sum(double(omegaShape) .* tmag))
+    %sum(sum(double(omegaShape) .* tmag));
     cost = 1/ sum(sum(double(omegaShape) .* tmag));
 end
 

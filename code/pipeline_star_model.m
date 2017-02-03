@@ -1,4 +1,4 @@
-function out = pipeline(buffydir,episodenr)
+function out = pipeline_star_model(buffydir,episodenr)
 % function out = DummyBuffyPoseEstimation(buffydir,episodenr)
 % this routine provides a dummy example of pose estimation pipeline
 % for each image in the dataset it returns from 0-10 random detections with a dummy pose
@@ -40,7 +40,6 @@ for i=1:imgNum
 end
 
 
-
 Files = dir(buffydir);
 invalid = false(length(Files),1);
 for i=1:numel(Files)
@@ -58,22 +57,35 @@ lF = ReadStickmenAnnotationTxt('../data/buffy_s5e2_sticks.txt');
 % inputGrids{4} = [0.5 0.75 1 1.25 1.5];
 
 
-inputGrids{1} = 30:20:720;
-inputGrids{2} = 30:10:400;
+inputGrids{1} = 1:20:720;
+inputGrids{2} = 1:10:400;
 inputGrids{3} = -pi/2: pi/10: pi/2;
 inputGrids{4} = [0.5, .6, .7, .9, 1, 1.1, 1.3, 1.5, 2];
 
+omega = load('omegaTemplate_revised.mat');
+omegaShape = omega.A;
 
 for i=1:10:N
         img = imread(fullfile(buffydir,Files(i).name));
     out(i).frame = str2double(Files(i).name(1:end-4));
     out(i).episode = episodenr;
     
+    %{
+    % Use new match cost function
+    [torsoTensor]    = parts_tensor_star(1, i, lF, inputGrids, W, imgList,omegaShape);
+    [leftArmTensor]  = parts_tensor_star(2, i, lF, inputGrids, W,imgList,omegaShape);
+    [leftLArmTensor]  = parts_tensor_star(4, i, lF, inputGrids, W,imgList,omegaShape);
+    [rightArmTensor] = parts_tensor_star(3, i, lF, inputGrids, W,imgList,omegaShape);
+    [rightLArmTensor] = parts_tensor_star(5, i, lF, inputGrids, W,imgList,omegaShape);
+    [headTensor ]    = parts_tensor_star(6, i, lF, inputGrids, W,imgList,omegaShape);
+    %}
     
-    [torsoTensor]    = parts_tensor_star(1, i, lF, inputGrids, W, imgList);
-    [leftArmTensor]  = parts_tensor_star(2, i, lF, inputGrids, W, imgList);
-    [rightArmTensor] = parts_tensor_star(3, i, lF, inputGrids, W, imgList);
-    [headTensor ]    = parts_tensor_star(6, i, lF, inputGrids, W, imgList);
+    [torsoTensor]    = parts_tensor_star(1, i, lF, inputGrids, W);
+    [leftArmTensor]  = parts_tensor_star(2, i, lF, inputGrids, W);
+    [leftLArmTensor]  = parts_tensor_star(4, i, lF, inputGrids, W);
+    [rightArmTensor] = parts_tensor_star(3, i, lF, inputGrids, W);
+    [rightLArmTensor] = parts_tensor_star(5, i, lF, inputGrids, W);
+    [headTensor ]    = parts_tensor_star(6, i, lF, inputGrids, W);
     
     torsoLoc    = minIndex(torsoTensor);
     torsoLoc    = torsoLoc(1,:);
@@ -89,19 +101,30 @@ for i=1:10:N
     headLoc = minIndex(headTensor);
     headLoc = headLoc(1,:);
     
+    leftLArmTensor  = calculateChildGivenParent(2,4, leftArmLoc, leftLArmTensor, inputGrids, W);
+    rightLArmTensor  = calculateChildGivenParent(3,5, rightArmLoc, rightLArmTensor, inputGrids, W);
+    leftLArmLoc = minIndex(leftLArmTensor);
+    leftLArmLoc = leftLArmLoc(1,:);
+    rightLArmLoc = minIndex(rightLArmTensor);
+    rightLArmLoc = rightLArmLoc(1,:);
     
     torsoLocation    = convertIndexToPixels(torsoLoc, inputGrids);
     rightArmLocation = convertIndexToPixels(rightArmLoc, inputGrids);
+    rightLArmLocation = convertIndexToPixels(rightLArmLoc, inputGrids);
     lefttArmLocation = convertIndexToPixels(leftArmLoc, inputGrids);
+    lefttLArmLocation = convertIndexToPixels(leftLArmLoc, inputGrids);
     headLocation     = convertIndexToPixels(headLoc, inputGrids);
     
     torsoStick = convertL2Sticks(torsoLocation, 1);
-    rArmStick  = convertL2Sticks(rightArmLocation, 2);
-    lArmStick  = convertL2Sticks(lefttArmLocation, 3);
+    lArmStick  = convertL2Sticks(lefttArmLocation, 2);
+    rArmStick  = convertL2Sticks(rightArmLocation, 3);
+    lLArmStick  = convertL2Sticks(lefttLArmLocation, 4);
+    rLArmStick  = convertL2Sticks(rightLArmLocation, 5);
     headStick  = convertL2Sticks(headLocation, 6);
     
-    sticks = [torsoStick, rArmStick, lArmStick, headStick];
+    sticks = [torsoStick, lArmStick, rArmStick, lLArmStick, rLArmStick, headStick];
     DrawStickman(sticks, img);
+    drawnow;
     
     out(i).stickmen = DummyDetect(img);
     for j=1:length(out(i).stickmen)
