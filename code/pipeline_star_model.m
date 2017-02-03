@@ -65,20 +65,11 @@ inputGrids{4} = [0.5, .6, .7, .9, 1, 1.1, 1.3, 1.5, 2];
 omega = load('omegaTemplate_revised.mat');
 omegaShape = omega.A;
 
-for i=1:10:N
-        img = imread(fullfile(buffydir,Files(i).name));
+for i=1:5:N
+    startTime = tic;
+    img = imread(fullfile(buffydir,Files(i).name));
     out(i).frame = str2double(Files(i).name(1:end-4));
     out(i).episode = episodenr;
-    
-    %{
-    % Use new match cost function
-    [torsoTensor]    = parts_tensor_star(1, i, lF, inputGrids, W, imgList,omegaShape);
-    [leftArmTensor]  = parts_tensor_star(2, i, lF, inputGrids, W,imgList,omegaShape);
-    [leftLArmTensor]  = parts_tensor_star(4, i, lF, inputGrids, W,imgList,omegaShape);
-    [rightArmTensor] = parts_tensor_star(3, i, lF, inputGrids, W,imgList,omegaShape);
-    [rightLArmTensor] = parts_tensor_star(5, i, lF, inputGrids, W,imgList,omegaShape);
-    [headTensor ]    = parts_tensor_star(6, i, lF, inputGrids, W,imgList,omegaShape);
-    %}
     
     [torsoTensor]    = parts_tensor_star(1, i, lF, inputGrids, W);
     [leftArmTensor]  = parts_tensor_star(2, i, lF, inputGrids, W);
@@ -123,12 +114,16 @@ for i=1:10:N
     headStick  = convertL2Sticks(headLocation, 6);
     
     sticks = [torsoStick, lArmStick, rArmStick, lLArmStick, rLArmStick, headStick];
-    DrawStickman(sticks, img);
-    drawnow;
     
-    out(i).stickmen = DummyDetect(img);
-    for j=1:length(out(i).stickmen)
-        out(i).stickmen(j).coor = DummyPose(img,out(i).stickmen(j).det);
-    end
+    imageTime = toc(startTime);
+    disp(['Time for image (', num2str(i), ') was ', num2str(imageTime), ' seconds.']);
+    
+    DrawStickman(sticks, img);
+    print(gcf, '-djpeg', ['ResultsStar/image' num2str(i)]);
+    
+%     out(i).stickmen = sticks;
+%     for j=1:length(out(i).stickmen)
+%         out(i).stickmen(j).coor = DummyPose(img,out(i).stickmen(j).det);
+%     end
 end
 end

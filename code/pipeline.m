@@ -42,58 +42,61 @@ out(N) = struct('frame',[],'stickmen',[]);
 lF = ReadStickmenAnnotationTxt('../data/buffy_s5e2_sticks.txt');
 
 %Define Input Grids
-% inputGrids{1} = 20:20:380;
-% inputGrids{2} = 20:20:700;
-% inputGrids{3} = -pi/2: (pi)/5 : pi/2;
-% inputGrids{4} = [0.5 0.75 1 1.25 1.5];
+inputGrids{1} = 1:20:720;
+inputGrids{2} = 1:10:400;
+inputGrids{3} = -pi/2: pi/10: pi/2;
+inputGrids{4} = [0.5, .6, .7, .9, 1, 1.1, 1.3, 1.5, 2];
 
 
-inputGrids{1} = 0:30:720;
-inputGrids{2} = 0:20:400;
-inputGrids{3} = -pi/2: pi/4: pi/2;
-inputGrids{4} = [0.5, .7, 1, 1.3, 1.5];
-% inputGrids{3} = 0;
-% inputGrids{4} = 1;
-
-
-for i=1:10:N
-        img = imread(fullfile(buffydir,Files(i).name));
-%     img = imread('000063.jpg');
+for i= 36:5:N
+    img = imread(fullfile(buffydir,Files(i).name));
     out(i).frame = str2double(Files(i).name(1:end-4));
     out(i).episode = episodenr;
+
     
-    %     for p = 1:6
-    %         parts_tensor(1, out(i))
-    %     end
-    
+    startTime = tic;
     % part is the query part, 1=torso, 2=left upper arm, 3=right upper arm,
     %                         4=left lower arm, 5=right lower arm, 6= head
-    %parts
-    tic;
     
+    % calculate match cost term
     [torsoTensor, torsoLoc] = parts_tensor(1, 1, i, lF, inputGrids, W);
+    [lleftArmTensor, lleftArmLoc] = parts_tensor(4, 2, i, lF, inputGrids, W);
+    [lrightArmTensor, lrightArmLoc] = parts_tensor(5, 3, i, lF, inputGrids, W);
     [leftArmTensor, leftArmLoc] = parts_tensor(2, 1, i, lF, inputGrids, W);
     [rightArmTensor, rightArmLoc] = parts_tensor(3, 1, i, lF, inputGrids, W);
     [headTensor , headLoc] = parts_tensor(6, 1, i, lF, inputGrids, W);
     
-    toc;
     
-    [torsoEnergy, ~] = genDistanceApprox(torsoTensor, K, torsoLoc);
-    [leftArmEnergy, leftArmLoc] = genDistanceApprox(leftArmTensor, K, leftArmLoc);
-    [rightArmEnergy, rightArmLoc] = genDistanceApprox(rightArmTensor, K, rightArmLoc);
+%     [torsoEnergy, torsoLocTensor] = genDistanceApprox(torsoTensor, K, torsoLoc);
+    
+    % calculate approximation for leafs
+    [lleftArmEnergy, lleftArmLoc] = genDistanceApprox(lleftArmTensor, K, lleftArmLoc);
+    [lrightArmEnergy, lrightArmLoc] = genDistanceApprox(rrightArmTensor, K, lrightArmLoc);
     [headEnergy, headLoc] = genDistanceApprox(headTensor, K, headLoc);
     
-    toc;
+    % calculate Tensors and approximations for upper arms
+    [leftArmTensor] = calculateParentTensor(leftArmTensor, {lleftArmEnergy});
+    [rightArmTensor] = calculateParentTensor(rightArmTensor, {lrightArmEnergy});
+    [leftArmEnergy, leftArmLoc] = genDistanceApprox(leftArmTensor, K, leftArmLoc);
+    [rightArmEnergy, rightArmLoc] = genDistanceApprox(rightArmTensor, K, rightArmLoc);
     
-    childrenTensors = {leftArmEnergy, rightArmEnergy, headEnergy};
+    % calculate tensor and approximation for torso
+    childrenTensors  = {leftArmEnergy, rightArmEnergy, headEnergy};
+    [torsoTensor] = calculateParentTensor(torsoTensor, childrenTensors);
+    [torsoEnergy, torsoLocTensor] = genDistanceApprox(torsoTensor, K, torsoLoc);
     
-    [torsoFinalCost] = calculateParentTensor(torsoEnergy, childrenTensors);
+    torsoLoc         = minIndex(lrightArmEnergy);
+    disp(['Number of minimized torsoCosts = ' num2str(size(torsoLoc, 1))]);
     
-    torsoLoc         = minIndex(torsoFinalCost);
+    if(size(torsoLoc,1) >= 2)    
+        torsoLoc         = minIndex(torsoTensor);
+    end
     
-    torsoLoc = torsoLoc(1,:);
+%     torsoLocation    = convertIndexToPixels(torsoLoc, inputGrids);
     
-    torsoLocation    = convertIndexToPixels(torsoLoc, inputGrids);
+    torsoLocation    = torsoLocTensor{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
+    rightArmLocation = rightArmLoc{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
+    lefttArmLocation = leftArmLoc{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
     rightArmLocation = rightArmLoc{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
     lefttArmLocation = leftArmLoc{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
     headLocation     = headLoc{torsoLoc(1), torsoLoc(2), torsoLoc(3), torsoLoc(4)};
@@ -103,9 +106,16 @@ for i=1:10:N
     lArmStick  = convertL2Sticks(lefttArmLocation, 3);
     headStick  = convertL2Sticks(headLocation, 6);
     
+    imageTime = toc(startTime);
+    disp(['Time for image (', num2str(i), ') was ', num2str(imageTime), ' seconds.']);
+    
     sticks = [torsoStick, rArmStick, lArmStick, headStick];
     DrawStickman(sticks, img);
-    toc;
+    print(gcf, '-djpeg', ['ResultsEfficient-Update/image' num2str(i)]);
+    
+%     drawnow;
+    
+  
     out(i).stickmen = DummyDetect(img);
     for j=1:length(out(i).stickmen)
         out(i).stickmen(j).coor = DummyPose(img,out(i).stickmen(j).det);
