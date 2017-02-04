@@ -51,7 +51,7 @@ inputGrids{4} = [0.5, .6, .7, .9, 1, 1.1, 1.3, 1.5, 2];
 
 elementsToCheck = [1:N];
 elementsToCheck(1:5:N) = [];
-elementsToCheck(1:9) = [];
+elementsToCheck(1:32) = [];
 for i= elementsToCheck
     img = imread(fullfile(buffydir,Files(i).name));
     out(i).frame = str2double(Files(i).name(1:end-4));
